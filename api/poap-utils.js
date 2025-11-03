@@ -12,7 +12,7 @@ export class PoapAPI {
         if (this.accessToken) return this.accessToken;
 
         try {
-            const response = await fetch(`${this.baseUrl}/oauth/token`, {
+            const response = await fetch('https://auth.accounts.poap.xyz/oauth/token', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -46,11 +46,9 @@ export class PoapAPI {
                 throw new Error('Invalid address format');
             }
 
-            const token = await this.getAccessToken();
-            
+            // Use simple API key authentication - no OAuth needed for scan endpoint
             const response = await fetch(`${this.baseUrl}/actions/scan/${address}`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'X-API-Key': this.apiKey
                 }
             });
