@@ -4,12 +4,28 @@
     {
       "src": "api/webhook.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/interactions.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/webhook",
       "dest": "/api/webhook.js"
+    },
+    {
+      "src": "/api/interactions",
+      "dest": "/api/interactions.js"
     }
-  ]
+  ],
+  "functions": {
+    "api/webhook.js": {
+      "maxDuration": 10
+    },
+    "api/interactions.js": {
+      "maxDuration": 10
+    }
+  }
 }
