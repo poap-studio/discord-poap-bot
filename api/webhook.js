@@ -1,65 +1,6 @@
 import { verifyKey, InteractionType, InteractionResponseType } from 'discord-interactions';
 import { PoapAPI, resolveENS } from './poap-utils.js';
-import { createCanvas, loadImage } from 'canvas';
 import fetch from 'node-fetch';
-
-// POAP Collage creation function
-async function createPOAPCollage(poapUrls) {
-    try {
-        const imageSize = 200;
-        const gridSize = 3;
-        const padding = 10;
-        const urls = poapUrls.slice(0, 9);
-        const canvasSize = (imageSize * gridSize) + (padding * (gridSize + 1));
-        
-        const canvas = createCanvas(canvasSize, canvasSize);
-        const ctx = canvas.getContext('2d');
-        
-        // Fill background with Discord dark theme
-        ctx.fillStyle = '#2C2F33';
-        ctx.fillRect(0, 0, canvasSize, canvasSize);
-        
-        // Load and draw images
-        for (let i = 0; i < urls.length; i++) {
-            try {
-                const row = Math.floor(i / gridSize);
-                const col = i % gridSize;
-                const x = padding + (col * (imageSize + padding));
-                const y = padding + (row * (imageSize + padding));
-                
-                const image = await loadImage(urls[i]);
-                
-                // Draw rounded image
-                ctx.save();
-                ctx.beginPath();
-                ctx.roundRect(x, y, imageSize, imageSize, 10);
-                ctx.clip();
-                ctx.drawImage(image, x, y, imageSize, imageSize);
-                ctx.restore();
-                
-            } catch (imageError) {
-                console.error(`Failed to load POAP image ${i}:`, imageError);
-                // Draw placeholder
-                const row = Math.floor(i / gridSize);
-                const col = i % gridSize;
-                const x = padding + (col * (imageSize + padding));
-                const y = padding + (row * (imageSize + padding));
-                
-                ctx.fillStyle = '#99AAB5';
-                ctx.fillRect(x, y, imageSize, imageSize);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('POAP', x + imageSize/2, y + imageSize/2);
-            }
-        }
-        
-        return canvas.toBuffer('image/png');
-    } catch (error) {
-        console.error('Error creating POAP collage:', error);
-        throw error;
-    }
-}
 
 
 export default async function handler(req, res) {
@@ -176,60 +117,41 @@ export default async function handler(req, res) {
                         });
                     }
 
-                    // Create the exact POAP collection grid from the image
+                    // Create POAP collection display with first image
                     const displayPoaps = poaps.slice(0, 9);
+                    const firstPOAP = poaps[0];
                     
-                    try {
-                        // Generate 3x3 grid collage
-                        const poapImageUrls = displayPoaps.map(poap => poap.event.image_url);
-                        const collageBuffer = await createPOAPCollage(poapImageUrls);
-                        
-                        // For now, use a simple approach - Discord allows data URLs for small images
-                        const base64Image = collageBuffer.toString('base64');
-                        const dataUrl = `data:image/png;base64,${base64Image}`;
-                        
-                        // Create the exact embed format from the image
-                        return res.json({
-                            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                            data: {
-                                embeds: [{
-                                    title: "🎫 POAP Collection Grid",
-                                    description: `**${address}** owns **${poaps.length}** POAPs\n📍\n${resolvedAddress}`,
-                                    color: 0x6534FF,
-                                    image: {
-                                        url: dataUrl
-                                    },
-                                    footer: {
-                                        text: `Latest ${Math.min(9, poaps.length)} of ${poaps.length} POAPs`
-                                    }
-                                }],
+                    // Create the exact embed format from the image
+                    return res.json({
+                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: {
+                            embeds: [{
+                                title: "🎫 POAP Collection",
+                                description: `**${address}** owns **${poaps.length}** POAPs\n📍\n${resolvedAddress}`,
+                                color: 0x6534FF,
+                                image: {
+                                    url: firstPOAP.event.image_url
+                                },
+                                fields: displayPoaps.slice(0, 5).map(poap => ({
+                                    name: poap.event.name,
+                                    value: poap.event.start_date,
+                                    inline: true
+                                })),
+                                footer: {
+                                    text: `Showing ${Math.min(displayPoaps.length, poaps.length)} of ${poaps.length} POAPs`
+                                }
+                            }],
+                            components: [{
+                                type: 1, // Action Row
                                 components: [{
-                                    type: 1, // Action Row
-                                    components: [{
-                                        type: 2, // Button
-                                        style: 5, // Link Button
-                                        label: "🔗 View Full Collection",
-                                        url: `https://app.poap.xyz/scan/${resolvedAddress}`
-                                    }]
+                                    type: 2, // Button
+                                    style: 5, // Link Button
+                                    label: "🔗 View Full Collection",
+                                    url: `https://app.poap.xyz/scan/${resolvedAddress}`
                                 }]
-                            }
-                        });
-                        
-                    } catch (collageError) {
-                        console.error('Failed to create collage, falling back to simple list:', collageError);
-                        
-                        // Fallback to simple text list if collage fails
-                        const poapList = displayPoaps.map(poap => 
-                            `• **${poap.event.name}** (${poap.event.start_date})`
-                        ).join('\n');
-
-                        return res.json({
-                            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                            data: {
-                                content: `🎫 **POAPs for ${address}:**\n\n${poapList}\n\n*Showing ${Math.min(9, poaps.length)} of ${poaps.length} POAPs*`,
-                            }
-                        });
-                    }
+                            }]
+                        }
+                    });
 
                 } catch (error) {
                     console.error('Error processing POAP command:', error);
