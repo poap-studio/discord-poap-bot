@@ -11,6 +11,13 @@ import distributeCommand from '../src/commands/distribute-poap.js';
 import poapGateCommand from '../src/commands/poap-gate.js';
 import autoDistributeCommand from '../src/commands/auto-distribute.js';
 
+// Disable body parsing for signature verification
+export const config = {
+    api: {
+        bodyParser: false,
+    },
+};
+
 // Initialize services
 const poapAPI = new PoapAPI();
 const database = new Database();
@@ -28,6 +35,19 @@ commands.set('distribute-poap', distributeCommand);
 commands.set('poap-gate', poapGateCommand);
 commands.set('auto-distribute', autoDistributeCommand);
 
+// Helper function to read the raw body
+function getRawBody(req) {
+    return new Promise((resolve) => {
+        let body = '';
+        req.on('data', (chunk) => {
+            body += chunk.toString();
+        });
+        req.on('end', () => {
+            resolve(body);
+        });
+    });
+}
+
 export default async function handler(req, res) {
     // Only accept POST requests
     if (req.method !== 'POST') {
@@ -35,11 +55,12 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Get raw body for verification
-        const rawBody = JSON.stringify(req.body);
         const signature = req.headers['x-signature-ed25519'];
         const timestamp = req.headers['x-signature-timestamp'];
-
+        
+        // Get raw body for signature verification
+        const rawBody = await getRawBody(req);
+        
         // Verify Discord signature
         const isValidRequest = verifyKey(
             rawBody,
@@ -49,10 +70,12 @@ export default async function handler(req, res) {
         );
 
         if (!isValidRequest) {
+            console.error('Signature verification failed');
             return res.status(401).json({ error: 'Invalid signature' });
         }
 
-        const interaction = req.body;
+        // Parse the interaction
+        const interaction = JSON.parse(rawBody);
 
         // Handle ping for Discord verification
         if (interaction.type === InteractionType.PING) {
