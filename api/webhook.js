@@ -1,4 +1,4 @@
-import { verifyKeyMiddleware, InteractionType, InteractionResponseType } from 'discord-interactions';
+import { verifyKey, InteractionType, InteractionResponseType } from 'discord-interactions';
 import { PoapAPI } from '../src/poap-api.js';
 import { Database } from '../src/database.js';
 import { ENSResolver } from '../src/ens-resolver.js';
@@ -35,15 +35,17 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Verify Discord signature
+        // Get raw body for verification
+        const rawBody = JSON.stringify(req.body);
         const signature = req.headers['x-signature-ed25519'];
         const timestamp = req.headers['x-signature-timestamp'];
-        const body = JSON.stringify(req.body);
 
-        const isValidRequest = verifyKeyMiddleware(process.env.DISCORD_PUBLIC_KEY)(
+        // Verify Discord signature
+        const isValidRequest = verifyKey(
+            rawBody,
             signature,
             timestamp,
-            body
+            process.env.DISCORD_PUBLIC_KEY || 'missing_public_key'
         );
 
         if (!isValidRequest) {
