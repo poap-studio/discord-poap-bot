@@ -68,75 +68,13 @@ export default async function handler(req, res) {
             console.log('Received command:', commandName);
             console.log('Command data:', JSON.stringify(interaction.data, null, 2));
 
-            if (commandName === 'poaps' || commandName === 'my-poaps') {
-                const addressOption = interaction.data.options?.find(opt => opt.name === 'address');
-                const address = addressOption?.value;
-
-                console.log('Address option:', addressOption);
-                console.log('Address value:', address);
-
-                if (!address) {
-                    return res.json({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: {
-                            content: '❌ Please provide an Ethereum address or ENS name.',
-                        }
-                    });
-                }
-
-                try {
-                    // Resolve ENS if needed
-                    const resolvedAddress = await resolveENS(address);
-                    console.log(`Resolved ${address} to ${resolvedAddress}`);
-
-                    // Fetch POAPs
-                    const poapAPI = new PoapAPI();
-                    const poaps = await poapAPI.getUserPOAPs(resolvedAddress);
-
-                    if (!poaps || poaps.length === 0) {
-                        return res.json({
-                            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                            data: {
-                                content: `🎫 No POAPs found for address: ${address}`,
-                            }
-                        });
-                    }
-
-                    // Create a simple text-based display for now
-                    const poapList = poaps.slice(0, 10).map((poap, index) => {
-                        const event = poap.event || poap;
-                        return `${index + 1}. **${event.name || 'Unknown Event'}** ${event.start_date ? `(${event.start_date})` : ''}`;
-                    }).join('\n');
-
-                    const totalCount = poaps.length;
-                    const displayCount = Math.min(10, totalCount);
-
-                    return res.json({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: {
-                            content: `🎫 **POAPs for ${address}**\n\nFound ${totalCount} POAPs (showing first ${displayCount}):\n\n${poapList}`,
-                        }
-                    });
-
-                } catch (error) {
-                    console.error('Error fetching POAPs:', error);
-                    return res.json({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: {
-                            content: `❌ Error fetching POAPs for ${address}: ${error.message}`,
-                            flags: 64 // Ephemeral response
-                        }
-                    });
-                }
-            }
-
-            // Default response for unknown commands
-            console.log('Command not handled:', commandName);
-            console.log('Available commands: poaps, my-poaps');
+            // TEMPORARY: Just respond to ANY command to test the flow
+            console.log('✅ Command processing started for:', commandName);
+            
             return res.json({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: `🎫 Unknown command: "${commandName}". Try /poaps or /my-poaps with an address parameter.`,
+                    content: `🎫 DEBUG: Received command "${commandName}" with data: ${JSON.stringify(interaction.data?.options)}`,
                 }
             });
         }
