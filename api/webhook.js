@@ -1,8 +1,9 @@
 import { verifyKey, InteractionType, InteractionResponseType } from 'discord-interactions';
 import { PoapAPI, resolveENS } from './poap-utils.js';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 import fetch from 'node-fetch';
 
-// POAP Collage creation function using HTML Canvas approach for serverless
+// POAP Collage creation function using proper Canvas for serverless
 async function createPOAPCollage(poapUrls) {
     try {
         const imageSize = 200;
@@ -11,32 +12,51 @@ async function createPOAPCollage(poapUrls) {
         const urls = poapUrls.slice(0, 9);
         const canvasSize = (imageSize * gridSize) + (padding * (gridSize + 1));
         
-        // Use jimp or similar library for serverless image processing
-        // For now, we'll create an HTML-based solution that works in serverless
-        const svgGrid = `
-        <svg width="${canvasSize}" height="${canvasSize}" xmlns="http://www.w3.org/2000/svg">
-            <rect width="${canvasSize}" height="${canvasSize}" fill="#2C2F33"/>
-            ${urls.map((url, i) => {
+        const canvas = createCanvas(canvasSize, canvasSize);
+        const ctx = canvas.getContext('2d');
+        
+        // Fill background with Discord dark theme
+        ctx.fillStyle = '#2C2F33';
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
+        
+        // Load and draw images
+        for (let i = 0; i < urls.length; i++) {
+            try {
                 const row = Math.floor(i / gridSize);
                 const col = i % gridSize;
                 const x = padding + (col * (imageSize + padding));
                 const y = padding + (row * (imageSize + padding));
-                return `
-                    <defs>
-                        <clipPath id="clip${i}">
-                            <rect x="${x}" y="${y}" width="${imageSize}" height="${imageSize}" rx="10" ry="10"/>
-                        </clipPath>
-                    </defs>
-                    <image x="${x}" y="${y}" width="${imageSize}" height="${imageSize}" 
-                           href="${url}" clip-path="url(#clip${i})" 
-                           onerror="this.href='data:image/svg+xml;base64,${Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg"><rect width="200" height="200" fill="#99AAB5"/><text x="100" y="100" text-anchor="middle" fill="white" font-size="16">POAP</text></svg>`).toString('base64')}'"/>
-                `;
-            }).join('')}
-        </svg>`;
+                
+                const image = await loadImage(urls[i]);
+                
+                // Draw rounded image
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(x, y, imageSize, imageSize, 10);
+                ctx.clip();
+                ctx.drawImage(image, x, y, imageSize, imageSize);
+                ctx.restore();
+                
+            } catch (imageError) {
+                console.error(`Failed to load POAP image ${i}:`, imageError);
+                // Draw placeholder
+                const row = Math.floor(i / gridSize);
+                const col = i % gridSize;
+                const x = padding + (col * (imageSize + padding));
+                const y = padding + (row * (imageSize + padding));
+                
+                ctx.fillStyle = '#99AAB5';
+                ctx.fillRect(x, y, imageSize, imageSize);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('POAP', x + imageSize/2, y + imageSize/2);
+            }
+        }
         
-        // Convert SVG to base64 data URL
-        const base64Svg = Buffer.from(svgGrid).toString('base64');
-        return `data:image/svg+xml;base64,${base64Svg}`;
+        const buffer = canvas.toBuffer('image/png');
+        const base64Image = buffer.toString('base64');
+        return `data:image/png;base64,${base64Image}`;
         
     } catch (error) {
         console.error('Error creating POAP collage:', error);
