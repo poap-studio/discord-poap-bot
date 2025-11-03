@@ -1,4 +1,5 @@
 import { verifyKey, InteractionType, InteractionResponseType } from 'discord-interactions';
+import { PoapAPI, resolveENS } from './poap-utils.js';
 
 export default async function handler(req, res) {
     // Only accept POST requests
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
             const commandName = interaction.data?.name;
             console.log('Received command:', commandName);
 
-            if (commandName === 'poaps') {
+            if (commandName === 'poaps' || commandName === 'my-poaps') {
                 const addressOption = interaction.data.options?.find(opt => opt.name === 'address');
                 const address = addressOption?.value;
 
@@ -74,15 +75,50 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // For now, return a simple response indicating the webhook is working
-                // In a full implementation, this would call the POAP API
-                return res.json({
-                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                    data: {
-                        content: `🎫 POAP Bot webhook is working! Would fetch POAPs for: ${address}\n\n*Note: Full POAP functionality will be implemented next.*`,
-                        flags: 64 // Ephemeral response
+                try {
+                    // Resolve ENS if needed
+                    const resolvedAddress = await resolveENS(address);
+                    console.log(`Resolved ${address} to ${resolvedAddress}`);
+
+                    // Fetch POAPs
+                    const poapAPI = new PoapAPI();
+                    const poaps = await poapAPI.getUserPOAPs(resolvedAddress);
+
+                    if (!poaps || poaps.length === 0) {
+                        return res.json({
+                            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                            data: {
+                                content: `🎫 No POAPs found for address: ${address}`,
+                            }
+                        });
                     }
-                });
+
+                    // Create a simple text-based display for now
+                    const poapList = poaps.slice(0, 10).map((poap, index) => {
+                        const event = poap.event || poap;
+                        return `${index + 1}. **${event.name || 'Unknown Event'}** ${event.start_date ? `(${event.start_date})` : ''}`;
+                    }).join('\n');
+
+                    const totalCount = poaps.length;
+                    const displayCount = Math.min(10, totalCount);
+
+                    return res.json({
+                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: {
+                            content: `🎫 **POAPs for ${address}**\n\nFound ${totalCount} POAPs (showing first ${displayCount}):\n\n${poapList}`,
+                        }
+                    });
+
+                } catch (error) {
+                    console.error('Error fetching POAPs:', error);
+                    return res.json({
+                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: {
+                            content: `❌ Error fetching POAPs for ${address}: ${error.message}`,
+                            flags: 64 // Ephemeral response
+                        }
+                    });
+                }
             }
 
             // Default response for unknown commands
