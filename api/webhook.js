@@ -58,11 +58,38 @@ export default async function handler(req, res) {
 
         // Handle slash commands
         if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-            console.log('Received command:', interaction.data?.name);
+            const commandName = interaction.data?.name;
+            console.log('Received command:', commandName);
+
+            if (commandName === 'poaps') {
+                const addressOption = interaction.data.options?.find(opt => opt.name === 'address');
+                const address = addressOption?.value;
+
+                if (!address) {
+                    return res.json({
+                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: {
+                            content: '❌ Please provide an Ethereum address or ENS name.',
+                        }
+                    });
+                }
+
+                // For now, return a simple response indicating the webhook is working
+                // In a full implementation, this would call the POAP API
+                return res.json({
+                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                    data: {
+                        content: `🎫 POAP Bot webhook is working! Would fetch POAPs for: ${address}\n\n*Note: Full POAP functionality will be implemented next.*`,
+                        flags: 64 // Ephemeral response
+                    }
+                });
+            }
+
+            // Default response for unknown commands
             return res.json({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: '🎫 POAP Bot is working! Webhook verification successful.',
+                    content: '🎫 POAP Bot webhook verification successful! Bot is now live on Vercel.',
                 }
             });
         }
