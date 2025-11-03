@@ -49,7 +49,12 @@ export default async function handler(req, res) {
         }
 
         const interaction = req.body;
+        console.log('=== FULL INTERACTION DEBUG ===');
         console.log('Interaction type:', interaction.type);
+        console.log('InteractionType.PING:', InteractionType.PING);
+        console.log('InteractionType.APPLICATION_COMMAND:', InteractionType.APPLICATION_COMMAND);
+        console.log('Full interaction body:', JSON.stringify(interaction, null, 2));
+        console.log('=== END DEBUG ===');
 
         // Handle ping for Discord verification
         if (interaction.type === InteractionType.PING) {
