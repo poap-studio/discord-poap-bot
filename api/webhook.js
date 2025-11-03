@@ -61,10 +61,14 @@ export default async function handler(req, res) {
         if (interaction.type === InteractionType.APPLICATION_COMMAND) {
             const commandName = interaction.data?.name;
             console.log('Received command:', commandName);
+            console.log('Command data:', JSON.stringify(interaction.data, null, 2));
 
             if (commandName === 'poaps' || commandName === 'my-poaps') {
                 const addressOption = interaction.data.options?.find(opt => opt.name === 'address');
                 const address = addressOption?.value;
+
+                console.log('Address option:', addressOption);
+                console.log('Address value:', address);
 
                 if (!address) {
                     return res.json({
@@ -122,10 +126,12 @@ export default async function handler(req, res) {
             }
 
             // Default response for unknown commands
+            console.log('Command not handled:', commandName);
+            console.log('Available commands: poaps, my-poaps');
             return res.json({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: '🎫 POAP Bot webhook verification successful! Bot is now live on Vercel.',
+                    content: `🎫 Unknown command: "${commandName}". Try /poaps or /my-poaps with an address parameter.`,
                 }
             });
         }
