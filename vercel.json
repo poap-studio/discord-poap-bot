@@ -12,12 +12,4 @@
       "dest": "/api/webhook.js"
     }
   ],
-  "env": {
-    "DISCORD_TOKEN": "@discord_token",
-    "DISCORD_CLIENT_ID": "@discord_client_id",
-    "DISCORD_CLIENT_SECRET": "@discord_client_secret",
-    "POAP_API_KEY": "@poap_api_key",
-    "POAP_CLIENT_ID": "@poap_client_id",
-    "POAP_CLIENT_SECRET": "@poap_client_secret"
-  }
 }
